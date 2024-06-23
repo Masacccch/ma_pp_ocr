@@ -1,13 +1,70 @@
+# Memo
+指定ディストリビューションでの起動
+ディストリビューションを指定して起動したい場合は以下コマンド。
+
+$ wsl -d Ubuntu-18.04 (または wsl --distribution Ubuntu-18.04 )
+
+wsl --install -d Ubuntu-20.04
+
+wsl うるさい
+
+sed -i -e "s/# set bell-style none/set bell-style none/g" /etc/inputrc
+echo "set belloff=all" >> /etc/vim/vimrc
+
+# Git
+
+git 消したファイル戻す addする前
+git status　確認
+git checkout ファイル名
+
+git pushしてからignoreに入れて消すやつ
+git rm --chache ファイル名
+ -r でフォルダ
+
+# Python
+end=""で開業なし
+
+nd.array 空の配列にアペンドしてく
+
+初期化
+frames = np.empty((0, 1920, 1080, 3), np.uint8)
+1920*1080*3が沢山入ってくるので先頭の次元を用意．具体的には入ってない状態なので0なのかな？
+uint8はopencv用
+追加
+frames = np.append(frames,frame[np.newaxis],axis=0)
+次元追加して，１次元大きくして，軸指定する．ｋｗｓｋ↓
+https://qiita.com/fist0/items/d0779ff861356dafaf95
+
+pprint
+
+# NewRepositry
+git init
+git ignore
+git config --global --add safe.directory /opt/pyocr2
+
+git add git commit 
+
+# NewPC-Act
+
 git config --global user.name 'kokesan1008'
 git config --global user.email '46284897+Masacccch@users.noreply.github.com'
 
-ssh-keygen -t rsa -b 4096 -C [メールアドレス] 適当にEnter*3
+ssh-keygen -t rsa -b 4096 -C [メールアドレス] 
+適当にEnter*3
 
 xclip -sel clip < ~/.ssh/id_rsa.pub
+でコピーできる．
 
+ここで事故った場合
+cat /root.ssh/id_rsa.pub > /opt/a.txt
+wslのほうで
+a.txt | clip.exe でコピーできる．
+
+これを
 GitHub：Settings→SSH and GPG keys→new SSH key
+貼り付け
 
-~/.sshのconfigにvimで
+~/.sshのconfigにvimで 以下を書き込み
 
 Host github
     HostName github.com
@@ -17,11 +74,10 @@ Host github
 ほんで
 ssh -T git@github.com
 
-git 消したファイル戻す addする前
-git status　確認
-git checkout ファイル名
-
-git pushしてからignoreに入れて消すやつ
-git rm --chache ファイル名
- -r でフォルダ
+wsl
+cd /opt/
+git clone HTTPのやつ，SSHじゃない sudoいるかも
+docker build -t pyocr:2.0 --no-cache /opt/ma-pp-ocr/.devcontainer
+-tでタグ作成．
+docker run -v /opt/のやつ:/optのやつ --name pc-1 -i -t pyocr:2.0 bin/bash
 
