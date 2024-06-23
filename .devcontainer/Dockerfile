@@ -11,5 +11,5 @@ RUN apt-get update \
 	&& pip install numpy --break-system-packages
 RUN  pip install opencv-python  --break-system-packages \ 
 	&& pip install tqdm --break-system-packages \
-	&& apt -y install git
+	&& apt install -y xclip \
 # END 
