@@ -12,4 +12,5 @@ RUN apt-get update \
 RUN  pip install opencv-python  --break-system-packages \ 
 	&& pip install tqdm --break-system-packages \
 	&& apt install -y xclip \
+	&& apt install -y git \
 # END 
