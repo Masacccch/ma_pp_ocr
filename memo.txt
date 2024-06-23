@@ -23,4 +23,5 @@ git checkout ファイル名
 
 git pushしてからignoreに入れて消すやつ
 git rm --chache ファイル名
+ -r でフォルダ
 
