@@ -1,0 +1,26 @@
+git config --global user.name 'kokesan1008'
+git config --global user.email '46284897+Masacccch@users.noreply.github.com'
+
+ssh-keygen -t rsa -b 4096 -C [メールアドレス] 適当にEnter*3
+
+xclip -sel clip < ~/.ssh/id_rsa.pub
+
+GitHub：Settings→SSH and GPG keys→new SSH key
+
+~/.sshのconfigにvimで
+
+Host github
+    HostName github.com
+    IdentityFile ~/.ssh/id_rsa
+    User git
+    IdentitiesOnly yes
+ほんで
+ssh -T git@github.com
+
+git 消したファイル戻す addする前
+git status　確認
+git checkout ファイル名
+
+git pushしてからignoreに入れて消すやつ
+git rm --chache ファイル名
+
