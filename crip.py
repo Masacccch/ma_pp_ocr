@@ -11,6 +11,10 @@ import os
 
 import re
 
+# from argparse import ArgumentParser
+import argparse
+
+
 # スクショが来ると，カードの配列を返す．
 def get_cards_from_screen(frame):
 
@@ -81,9 +85,19 @@ def detect_overlap(frame1, frame2, threshold=0.9):
     else:
         return 0
 
+parser = argparse.ArgumentParser()
+
+parser.add_argument('arg1',default='ppd.mp4')
+parser.add_argument('arg2',default='20', type=int)
+
+args=parser.parse_args()
+
 
 # 動画のパスを指定
-video_path = "ppd.mp4"
+video_path = args.arg1
+
+if not os.path.exists('out'):
+    os.mkdir('out')
 
 # 動画を読み込む
 cap = cv2.VideoCapture(video_path)
@@ -93,7 +107,7 @@ frames = np.empty((0, 1920, 1080, 3), np.uint8)
 # frames_normal = []
 
 # フレーム間引き
-PER = 15
+PER = args.arg2
 
 # フレームを読み込む
 print("動画を読み込んでいます...")
