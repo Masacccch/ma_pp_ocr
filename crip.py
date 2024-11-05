@@ -144,16 +144,25 @@ print("\nStart OCR")
 errlist = []
 errcnt = 0
 
+# OCRの準備
 tools = pyocr.get_available_tools()
 tool = tools[0]
 builder = pyocr.builders.TextBuilder(tesseract_layout=6)
+
+# フレームごと
 for i in tqdm(range(len(frames))):  # len(frames)
+    #カードを持ってくる
     cards = get_cards_from_screen(frames[i])
     errcnt = 0
+
+    #　切り出されたカードごとに処理
     for j in range(len(cards)):
         pilimage= Image.fromarray(cards[j])
+        # OCR
         text = tool.image_to_string(pilimage,lang='jpn',builder=builder).replace(" ", "").split()
+        # 数字だけPick決済番号を特定
         k = re.sub(r"\D", "", text[0])
+        # すでに取得した番号かをチェック
         v = next((d["Num"] for d in d_list if d["Num"] == k), None)
         if v is None:
             d = {"Fn": i, "Cn": j, "Num": k, "str": text[1:]}
