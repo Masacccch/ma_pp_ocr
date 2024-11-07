@@ -11,7 +11,6 @@ import os
 
 import re
 
-# from argparse import ArgumentParser
 import argparse
 
 
@@ -19,15 +18,17 @@ import argparse
 def get_cards_from_screen(frame):
 
     HEADER_HEIGHT = 170  # paypayのヘッダ部分
-    OUTER_POINT = [5,100] # paypayの背景の場所
-    CARD_MIN_HEIGHT = 200 # カードの最小高さ
-    CARD_WIDTH = [20,1050] # カードの両端の位置
+    OUTER_POINT = [5, 100]  # paypayの背景の場所
+    CARD_MIN_HEIGHT = 200  # カードの最小高さ
+    CARD_WIDTH = [20, 1050]  # カードの両端の位置
 
     # ヘッダ切り取っていじる
     frame_gp = frame[HEADER_HEIGHT : frame.shape[0], 0 : frame.shape[1]]
 
     # 紫で背景塗り潰しして2値化ちゃん
-    _, frame_gp, _, _ = cv2.floodFill(frame_gp, None, seedPoint=OUTER_POINT, newVal=(100, 0, 100))
+    _, frame_gp, _, _ = cv2.floodFill(
+        frame_gp, None, seedPoint=OUTER_POINT, newVal=(100, 0, 100)
+    )
     _, frame_gp = cv2.threshold(
         cv2.cvtColor(frame_gp, cv2.COLOR_BGR2GRAY), 128, 255, cv2.THRESH_BINARY
     )
@@ -54,7 +55,10 @@ def get_cards_from_screen(frame):
             # print(i,"is too small")
             continue
 
-        crop = frame[startend[i][0]+HEADER_HEIGHT : startend[i][1]+HEADER_HEIGHT, CARD_WIDTH[0]:CARD_WIDTH[1]]
+        crop = frame[
+            startend[i][0] + HEADER_HEIGHT : startend[i][1] + HEADER_HEIGHT,
+            CARD_WIDTH[0] : CARD_WIDTH[1],
+        ]
         co_frames.append(crop)
 
         # cv2.imwrite("out/crip_" + str(i) + ".png", cv2.cvtColor(crop, cv2.COLOR_BGR2RGB))
@@ -85,19 +89,20 @@ def detect_overlap(frame1, frame2, threshold=0.9):
     else:
         return 0
 
+
 parser = argparse.ArgumentParser()
 
-parser.add_argument('arg1',default='ppd.mp4')
-parser.add_argument('arg2',default='20', type=int)
+parser.add_argument("arg1", default="ppd.mp4")
+parser.add_argument("arg2", default="20", type=int)
 
-args=parser.parse_args()
+args = parser.parse_args()
 
 
 # 動画のパスを指定
 video_path = args.arg1
 
-if not os.path.exists('out'):
-    os.mkdir('out')
+if not os.path.exists("out"):
+    os.mkdir("out")
 
 # 動画を読み込む
 cap = cv2.VideoCapture(video_path)
@@ -120,7 +125,7 @@ while True:
         continue
     else:
         print("*", end="")
-    if not ret: #  or cnt > 25
+    if not ret:  #  or cnt > 25
         break
     # フレームをRGBに変換 (OpenCVはBGRで読み込むので)
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -151,15 +156,19 @@ builder = pyocr.builders.TextBuilder(tesseract_layout=6)
 
 # フレームごと
 for i in tqdm(range(len(frames))):  # len(frames)
-    #カードを持ってくる
+    # カードを持ってくる
     cards = get_cards_from_screen(frames[i])
     errcnt = 0
 
-    #　切り出されたカードごとに処理
+    # 　切り出されたカードごとに処理
     for j in range(len(cards)):
-        pilimage= Image.fromarray(cards[j])
+        pilimage = Image.fromarray(cards[j])
         # OCR
-        text = tool.image_to_string(pilimage,lang='jpn',builder=builder).replace(" ", "").split()
+        text = (
+            tool.image_to_string(pilimage, lang="jpn", builder=builder)
+            .replace(" ", "")
+            .split()
+        )
         # 数字だけPick決済番号を特定
         k = re.sub(r"\D", "", text[0])
         # すでに取得した番号かをチェック
@@ -167,12 +176,14 @@ for i in tqdm(range(len(frames))):  # len(frames)
         if v is None:
             d = {"Fn": i, "Cn": j, "Num": k, "str": text[1:]}
             d_list.append(d)
-            errcnt = errcnt +1 
+            errcnt = errcnt + 1
             # print("alreadyExist",end="")
     # 記録
-    errlist.append([i,j,errcnt])
+    errlist.append([i, j, errcnt])
 
-with open("out/"+video_path +"_"+str(PER)+".json", mode="wt", encoding="utf-8") as f:
+with open(
+    "out/" + video_path + "_" + str(PER) + ".json", mode="wt", encoding="utf-8"
+) as f:
     json.dump(d_list, f, ensure_ascii=False, indent=2)
 
 print("finish")
