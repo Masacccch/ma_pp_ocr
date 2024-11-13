@@ -176,12 +176,12 @@ for i in tqdm(range(len(frames))):  # len(frames)
         )
         # 数字だけPick決済番号を特定
         k = re.sub(r"\D", "", text[0])
-        if k == "03498895099141480453":
-            cv2.imwrite("out/tmp1.png", cards[j])
-            print("saved")
+        # if k == "03498895099141480453":
+        #     cv2.imwrite("out/tmp1.png", cards[j])
+        #     print("saved")
         # すでに取得した番号かをチェック
         v = next((d["Num"] for d in d_list if d["Num"] == k), None)
-        if v is None:
+        if d["Num"] != '' and v is None:
             d = {"Fn": i, "Cn": j, "Num": k, "str": text[1:]}
             d_list.append(d)
             errcnt = errcnt + 1
