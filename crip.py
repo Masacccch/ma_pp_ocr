@@ -181,7 +181,7 @@ for i in tqdm(range(len(frames))):  # len(frames)
         #     print("saved")
         # すでに取得した番号かをチェック
         v = next((d["Num"] for d in d_list if d["Num"] == k), None)
-        if d["Num"] != '' and v is None:
+        if len(k) == 20 and v is None:
             d = {"Fn": i, "Cn": j, "Num": k, "str": text[1:]}
             d_list.append(d)
             errcnt = errcnt + 1

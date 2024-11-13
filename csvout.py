@@ -47,7 +47,7 @@ def find_date(str):
         return res
 
 
-with open("out/ppdc2.mp4_20.json") as f:
+with open("out/ppd.mp4_15.json") as f:
     d = json.load(f)
 
 no_date_cnt = 0
@@ -65,7 +65,7 @@ for index, di_ct in enumerate(d):
     dated_num = 0
     # このforは店名などそもそも日付じゃないのも来る
     for j, stri in enumerate(di_ct["str"]):
-        if index ==3 and j == 1:
+        if index == 3 and j == 1:
             print("stop")
         try:
             res_date = find_date(stri)
@@ -85,7 +85,7 @@ for index, di_ct in enumerate(d):
     else:
         strcombined = di_ct["str"][:dated_num] + di_ct["str"][dated_num + 1 :]
         # 数字だけつまり金額だけ抜く
-        price_a = re.sub(r"\D", "",  ', '.join(strcombined))
+        price_a = re.sub(r"\D", "", ", ".join(strcombined))
         ddd = {
             "Date": str(getted_date),
             "Num": di_ct["Num"],
@@ -97,7 +97,12 @@ for index, di_ct in enumerate(d):
 
     # dl.append(d)
 
-fieldnames = ["Date", "Num","str","Price"]
+fieldnames = [
+    "Date",
+    "Num",
+    "Price",
+    "str",
+]
 with open("out/outcsv.csv", "w", newline="") as f:
     writer = csv.DictWriter(f, fieldnames=fieldnames)
     writer.writeheader()
