@@ -1,4 +1,4 @@
-# Lineの
+# Lineの単語数を図るやつ
 
 from datetime import datetime
 # matplotlibのpyplotをインポート
