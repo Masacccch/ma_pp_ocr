@@ -1,3 +1,5 @@
+# PayPay-OCR OCR部分担当
+
 import json
 import cv2
 from PIL import Image
@@ -130,7 +132,9 @@ while True:
         break
     # フレームをRGBに変換 (OpenCVはBGRで読み込むので)
     # 後で使うのでframesにとっとく
-    frames = np.append(frames, cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)[np.newaxis], axis=0)
+    frames = np.append(
+        frames, cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)[np.newaxis], axis=0
+    )
     # frames_normal.append(frame)
 
 # 動画の読み込みを終了
@@ -172,8 +176,8 @@ for i in tqdm(range(len(frames))):  # len(frames)
         )
         # 数字だけPick決済番号を特定
         k = re.sub(r"\D", "", text[0])
-        if k == '03498895099141480453':
-            cv2.imwrite("out/tmp1.png",cards[j])
+        if k == "03498895099141480453":
+            cv2.imwrite("out/tmp1.png", cards[j])
             print("saved")
         # すでに取得した番号かをチェック
         v = next((d["Num"] for d in d_list if d["Num"] == k), None)
