@@ -1,5 +1,6 @@
 # PayPay-OCR OCR部分担当
 
+from datetime import datetime
 import json
 import cv2
 from PIL import Image
@@ -20,116 +21,67 @@ import argparse
 def get_cards_from_screen(frame):
 
     cv2.imwrite("out/test.png", cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    # iPhone14proMax
+    HEADER_HEIGHT = 392  # paypayのヘッダ部分
+    OUTER_POINT = 10  # カードの文字被らなさそうなとこ
+    CARD_MIN_HEIGHT = 250  # カードの最小高さ
+    CARD_WIDTH = [24, 868]  # カードの両端の位置
 
-    if args.iphone == 8 :
-        # iPhone8+
-        HEADER_HEIGHT = 170  # paypayのヘッダ部分
-        OUTER_POINT = [5, 100]  # paypayの背景の場所
-        CARD_MIN_HEIGHT = 200  # カードの最小高さ
-        CARD_WIDTH = [20, 1050]  # カードの両端の位置
+    # ヘッダ切り取っていじる
+    frame_gp = frame[HEADER_HEIGHT : frame.shape[0], 0 : frame.shape[1]]
 
-        # ヘッダ切り取っていじる
-        frame_gp = frame[HEADER_HEIGHT : frame.shape[0], 0 : frame.shape[1]]
+    cv2.imwrite("out/test2.png", cv2.cvtColor(frame_gp, cv2.COLOR_BGR2RGB))
 
-        # 紫で背景塗り潰しして2値化ちゃん
-        _, frame_gp, _, _ = cv2.floodFill(
-            frame_gp, None, seedPoint=OUTER_POINT, newVal=(100, 0, 100)
-        )
-        _, frame_gp = cv2.threshold(
-            cv2.cvtColor(frame_gp, cv2.COLOR_BGR2GRAY), 128, 255, cv2.THRESH_BINARY
-        )
+    # _, frame_gp = cv2.threshold(
+    #     cv2.cvtColor(frame_gp, cv2.COLOR_BGR2GRAY), 128, 255, cv2.THRESH_BINARY
+    # )
 
-        # 矩形の開始・終了場所を調べる
-        startend = []
-        renkuke = False
-        tmpstart = 0
-        for i in range(frame_gp.shape[0] - 1):
-            # 初めて白に出会った場合
-            if frame_gp[i, CARD_WIDTH[0]] == 255 and renkuke == False:
-                renkuke = True
-                tmpstart = i
-            # 白が終わったとき
-            if frame_gp[i, CARD_WIDTH[0]] == 0 and renkuke == True:
-                renkuke = False
-                startend.append([tmpstart, i])
+    cv2.imwrite("out/test3.png", cv2.cvtColor(frame_gp, cv2.COLOR_BGR2RGB))
 
-        frame_gp = cv2.cvtColor(frame_gp, cv2.COLOR_GRAY2BGR)
-        co_frames = []
+    # 矩形の開始・終了場所を調べる
+    startend = []
+    renkuke = False
+    tmpstart = 0
+    for i in range(frame_gp.shape[0] - 1):
+        # 初めて白に出会った場合
+        if (
+            np.array_equal(frame_gp[i, CARD_WIDTH[0]], [255, 253, 255])
+            and renkuke == False
+        ):
+            renkuke = True
+            tmpstart = i
+        # 白が終わったとき
+        if (
+            np.array_equal(frame_gp[i, CARD_WIDTH[0]], [255, 253, 255]) == False
+            and renkuke == True
+        ):
+            renkuke = False
+            startend.append([tmpstart, i])
 
-        for i in range(len(startend)):
-            if startend[i][1] - startend[i][0] < CARD_MIN_HEIGHT:
-                # print(i,"is too small")
-                continue
+    # frame_gp = cv2.cvtColor(frame_gp, cv2.COLOR_GRAY2BGR)
+    co_frames = []
 
-            crop = frame[
-                startend[i][0] + HEADER_HEIGHT : startend[i][1] + HEADER_HEIGHT,
-                CARD_WIDTH[0] : CARD_WIDTH[1],
-            ]
-            co_frames.append(crop)
+    # 切り出し
+    for i in range(len(startend)):
+        if startend[i][1] - startend[i][0] < CARD_MIN_HEIGHT:
+            # print(i,"is too small")
+            continue
 
-            # cv2.imwrite("out/crip_" + str(i) + ".png", cv2.cvtColor(crop, cv2.COLOR_BGR2RGB))
-        # cv2.imwrite("out/crp.png", cv2.cvtColor(frame_gp, cv2.COLOR_BGR2RGB))
+        crop = frame[
+            startend[i][0] + HEADER_HEIGHT : startend[i][1] + HEADER_HEIGHT,
+            CARD_WIDTH[0] : CARD_WIDTH[1],
+        ]
+        co_frames.append(crop)
 
-        # print("fin")
-        return co_frames
-    elif args.iphone == 14:
-        # iPhone14proMax
-        HEADER_HEIGHT = 392  # paypayのヘッダ部分
-        OUTER_POINT = 10  # カードの文字被らなさそうなとこ
-        CARD_MIN_HEIGHT = 250  # カードの最小高さ
-        CARD_WIDTH = [24, 868]  # カードの両端の位置
+        cv2.imwrite("out/test4.png", cv2.cvtColor(crop, cv2.COLOR_BGR2RGB))
 
-        # ヘッダ切り取っていじる
-        frame_gp = frame[HEADER_HEIGHT : frame.shape[0], 0 : frame.shape[1]]
+        # print("a")
 
-        cv2.imwrite("out/test2.png", cv2.cvtColor(frame_gp, cv2.COLOR_BGR2RGB))
+        # cv2.imwrite("out/crip_" + str(i) + ".png", cv2.cvtColor(crop, cv2.COLOR_BGR2RGB))
+    # cv2.imwrite("out/crp.png", cv2.cvtColor(frame_gp, cv2.COLOR_BGR2RGB))
 
-        # _, frame_gp = cv2.threshold(
-        #     cv2.cvtColor(frame_gp, cv2.COLOR_BGR2GRAY), 128, 255, cv2.THRESH_BINARY
-        # )
-
-        cv2.imwrite("out/test3.png", cv2.cvtColor(frame_gp, cv2.COLOR_BGR2RGB))
-
-        # 矩形の開始・終了場所を調べる
-        startend = []
-        renkuke = False
-        tmpstart = 0
-        for i in range(frame_gp.shape[0] - 1):
-            # 初めて白に出会った場合
-            if np.array_equal(frame_gp[i, CARD_WIDTH[0]],[255,253,255]) and renkuke == False:
-                renkuke = True
-                tmpstart = i
-            # 白が終わったとき
-            if (
-                np.array_equal(frame_gp[i, CARD_WIDTH[0]], [255, 253, 255]) == False
-                and renkuke == True
-            ):
-                renkuke = False
-                startend.append([tmpstart, i])
-
-        # frame_gp = cv2.cvtColor(frame_gp, cv2.COLOR_GRAY2BGR)
-        co_frames = []
-
-        for i in range(len(startend)):
-            if startend[i][1] - startend[i][0] < CARD_MIN_HEIGHT:
-                # print(i,"is too small")
-                continue
-
-            crop = frame[
-                startend[i][0] + HEADER_HEIGHT : startend[i][1] + HEADER_HEIGHT,
-                CARD_WIDTH[0] : CARD_WIDTH[1],
-            ]
-            co_frames.append(crop)
-
-            cv2.imwrite("out/test4.png", cv2.cvtColor(crop, cv2.COLOR_BGR2RGB))
-
-            # print("a")
-
-            # cv2.imwrite("out/crip_" + str(i) + ".png", cv2.cvtColor(crop, cv2.COLOR_BGR2RGB))
-        # cv2.imwrite("out/crp.png", cv2.cvtColor(frame_gp, cv2.COLOR_BGR2RGB))
-
-        # print("fin")
-        return co_frames
+    # print("fin")
+    return co_frames
 
 
 def detect_overlap(frame1, frame2, threshold=0.9):
@@ -156,9 +108,9 @@ def detect_overlap(frame1, frame2, threshold=0.9):
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument("-v", "--video", default="p14c.MP4")
-parser.add_argument("-p", "--per", default="40", type=int)
-parser.add_argument("-i", "--iphone", default="14", type=int)
+# 実質ここで読むファイル指定
+parser.add_argument("-v", "--video", default="p14.mp4")
+parser.add_argument("-p", "--per", default="15", type=int)
 
 args = parser.parse_args()
 
@@ -173,10 +125,7 @@ if not os.path.exists("out"):
 cap = cv2.VideoCapture(video_path)
 
 # フレームリストを初期化
-if args.iphone == 8 :
-    FRAME_WIDTH = 1080
-elif args.iphone == 14 :
-    FRAME_WIDTH = 886
+FRAME_WIDTH = 886
 frames = np.empty((0, 1920, FRAME_WIDTH, 3), np.uint8)
 # frames_normal = []
 
@@ -207,12 +156,6 @@ while True:
 # 動画の読み込みを終了
 cap.release()
 
-# def cardtxt2dict(framenum,cardnum,str):
-#     fnum = framenum
-#     cnum = cardnum
-#     num, title, shop, date, price = str.split()
-#     d = {"fnum":fnum,"cnum":cnum,"title":title,"shop":shop,"date":date,"price":price}
-#     return d
 
 d_list = []
 
@@ -225,6 +168,83 @@ errcnt = 0
 tools = pyocr.get_available_tools()
 tool = tools[0]
 builder = pyocr.builders.TextBuilder(tesseract_layout=6)
+
+
+def convert_to_datetime(nen, gatu, bi, ji, fun):
+    # print(nen,gatu,bi,ji,fun,sep="-")
+    # 年月日時分を datetime オブジェクトに変換
+    dt = datetime(year=nen, month=gatu, day=bi, hour=ji, minute=fun)
+    is_within_range(dt)
+    return dt
+
+
+def is_within_range(dt):
+    # 2018年10月1日から今日までの範囲を設定
+    start_date = datetime(2018, 10, 1)
+    end_date = datetime.now()
+
+    # 指定された日付が範囲内にあるかどうかを判定
+    if start_date <= dt <= end_date:
+        return True
+    else:
+        # print(nen,gatu,bi,ji,fun,sep="-")
+        print(dt)
+        raise ValueError
+        return False
+
+# 文字列からdatetimeを返す
+def find_date(str):
+    snen = str.find("年")
+    sgatu = str.find("月")
+    sbi = str.find("日")
+    sji = str.find("時")
+    sfun = str.find("分")
+    if snen != -1 and sgatu != -1 and sbi != -1 and sji != -1 and sfun != -1:
+
+        nen = int(str[snen - 4 : snen])
+        gatu = int(str[snen + 1 : sgatu])
+        bi = int(str[sgatu + 1 : sbi])
+        ji = int(str[sbi + 1 : sji])
+        fun = int(str[sji + 1 : sfun])
+        # print(nen, gatu, bi, ji, fun)
+        res = convert_to_datetime(nen, gatu, bi, ji, fun)
+        return res
+
+
+# 日付以外も入ってる文字列たちからdatetimeを返す
+def findDate_from_text(txt):
+    no_date_cnt = 0
+    parse_err_cnt = 0
+
+    # たぶんいらん
+    l = []  
+
+    no_date_flg = True
+    getted_date = None
+    dated_num = 0
+    # このforは店名などそもそも日付じゃないのも来る
+    for j, stri in enumerate(txt):
+        try:
+            res_date = find_date(stri)
+            if type(res_date) is datetime:
+                l.append(res_date)
+                getted_date = res_date
+                no_date_flg = False
+                dated_num = j
+                continue
+        except ValueError:
+            parse_err_cnt += 1
+            None
+            # print("err")
+    if no_date_flg:
+        no_date_cnt += 1
+    # ちゃんと日付入ってたら
+    else:
+        # print("a")
+        strcombined = txt[:dated_num] + txt[dated_num + 1 :]
+
+        return [getted_date,strcombined]
+
 
 # フレームごと
 for i in tqdm(range(len(frames))):  # len(frames)
@@ -241,73 +261,51 @@ for i in tqdm(range(len(frames))):  # len(frames)
             .replace(" ", "")
             .split()
         )
-        # 数字だけPick決済番号を特定
-        k = re.sub(r"\D", "", text[0])
-        # if k == "03498895099141480453":
-        #     cv2.imwrite("out/tmp1.png", cards[j])
-        #     print("saved")
-        # すでに取得した番号かをチェック
-        v = next((d["Num"] for d in d_list if d["Num"] == k), None)
-        if len(k) == 20 and v is None:
-            d = {"Fn": i, "Cn": j, "Num": k, "str": text[1:]}
+
+        res,strcomb = findDate_from_text(text)
+
+        # すでに取得した日付かをチェック
+        v = next((d["Date"] for d in d_list if d["Date"] == res), None)
+        if v is None:
+            d = {"Fn": i, "Cn": j,"Date":res, "str": strcomb}
             d_list.append(d)
             errcnt = errcnt + 1
             # print("alreadyExist",end="")
     # 記録
     errlist.append([i, j, errcnt])
 
+
+# サポート外の型が指定されたときの挙動を定義
+def custom_default(o):
+    if hasattr(o, "__iter__"):
+        # イテラブルなものはリストに
+        return list(o)
+    # elif isinstance(o, (datetime, date)):
+    #     # 日時の場合はisoformatに
+    #     return o.isoformat()
+    else:
+        # それ以外は文字列に
+        return str(o)
+
+
 with open(
     "out/" + video_path + "_" + str(PER) + ".json", mode="wt", encoding="utf-8"
 ) as f:
-    json.dump(d_list, f, ensure_ascii=False, indent=2)
+    json.dump(d_list, f, ensure_ascii=False, indent=2,default=custom_default)
 
 print("finish")
-# print("nextCard")
-# text = text.replace(" ", "")
-# with open("out/text.txt",mode='a') as f:
-#     f.write("Frame="+str(i)+"Cards="+str(j)+"\n"+text+"\n")
-
-# 辞書の中身
-# Frame=0Cards=0
-# 決済番号03498895099141480453
-# ダイソーに支払い
-# 愛知東海店
-# 2020年11月27日18時50分
-# 110m
-# Frame,Card,num,title,shop,date,price
 
 
-# # 最初のフレームを追加
-# stitched_frames = [frames[0]]
+# ↓金額だけ抜くやつ
 
-# np.save("out/fr1", frames[1])
-
-# # フレーム間の重複を削除
-# print("\nフレーム間の重複を削除しています...")
-# for i in tqdm(range(1, len(frames))):
-#     overlap_height = detect_overlap(stitched_frames[-1], frames[i])
-#     if overlap_height > 0:
-#         new_frame = frames[i][overlap_height:]
-#     else:
-#         new_frame = frames[i]
-#     stitched_frames.append(new_frame)
-
-# # 縦長画像の高さを計算
-# total_height = sum(frame.shape[0] for frame in stitched_frames)
-# frame_width = frames[0].shape[1]
-
-# # 縦長画像を作成
-# stitched_image = Image.new("RGB", (frame_width, total_height))
-
-# # 各フレームを縦に結合
-# print("フレームを縦に結合しています...")
-# current_y = 0
-# for frame in tqdm(stitched_frames):
-#     frame_image = Image.fromarray(frame)
-#     stitched_image.paste(frame_image, (0, current_y))
-#     current_y += frame_image.height
-
-# # 縦長画像を保存
-# stitched_image.save("stitched_image2.png")
-
-# print("縦長画像の作成が完了しました")
+#
+# # 数字だけつまり金額だけ抜く
+# price_a = re.sub(r"\D", "", ", ".join(strcombined))
+# ddd = {
+#     "Date": str(getted_date),
+#     # "Num": di_ct["Num"],
+#     "Price": price_a,
+#     "str": strcombined,
+# }
+# dl.append(ddd)
+# # print("next")
