@@ -1,5 +1,6 @@
 # PayPay-OCR OCR部分担当
 
+import csv
 from datetime import datetime
 import json
 import cv2
@@ -17,14 +18,56 @@ import re
 import argparse
 
 
+def get_price(txt):
+    price = -1
+    for j, stri in enumerate(txt):
+        price_t = 0
+        m = re.finditer(r"\d+", stri)
+        ml = list(m)
+        # 数字あった
+        if len(ml) == 1:
+            # １つならその数字が金額や
+            price_t = int(ml[0].group())
+        elif len(ml) == 2:
+            # 2つなら，間が離れすぎてなきゃその数字やねん
+            sub = ml[1].start() - ml[0].start()
+            if sub <= 3:
+                # 2で1文字,3で2文字間にある．
+                price_t = int(re.sub(r"\D", "", ", ".join(stri)))
+            else:
+                # 間の数字が３つ以上なら，後ろの数字が金額や
+                price_t = int(ml[1].group())
+        elif len(ml) >= 3:
+            # ３つ以上検出されたら，末尾か，末尾２つやな．
+            sub = ml[-1].start() - ml[-2].start()
+            if sub <= 3:
+                # 2で1文字,3で2文字間にある．
+                price_t = int(re.sub(r"\D", "", ", ".join(ml[-2].group() + ml[-1].group())))
+            else:
+                # 間の数字が３つ以上なら，後ろの数字が金額や
+                price_t = int(ml[-1].group())
+        else:
+            # 数字なかった
+            continue
+
+        # カードの中で，大きい候補がおそらく金額
+        if price == -1:
+            price = price_t
+        else:
+            # 金額候補が複数あった場合
+            if price < price_t:
+                price = price_t
+    return price
+
+
 # スクショが来ると，カードの配列を返す．
 def get_cards_from_screen(frame):
 
-    cv2.imwrite("out/test.png", cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    # cv2.imwrite("out/test.png", cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
     # iPhone14proMax
     HEADER_HEIGHT = 392  # paypayのヘッダ部分
     OUTER_POINT = 10  # カードの文字被らなさそうなとこ
-    CARD_MIN_HEIGHT = 250  # カードの最小高さ
+    CARD_MIN_HEIGHT = 200  # カードの最小高さ
     CARD_WIDTH = [24, 868]  # カードの両端の位置
 
     # ヘッダ切り取っていじる
@@ -36,7 +79,7 @@ def get_cards_from_screen(frame):
     #     cv2.cvtColor(frame_gp, cv2.COLOR_BGR2GRAY), 128, 255, cv2.THRESH_BINARY
     # )
 
-    cv2.imwrite("out/test3.png", cv2.cvtColor(frame_gp, cv2.COLOR_BGR2RGB))
+    # cv2.imwrite("out/test3.png", cv2.cvtColor(frame_gp, cv2.COLOR_BGR2RGB))
 
     # 矩形の開始・終了場所を調べる
     startend = []
@@ -73,7 +116,7 @@ def get_cards_from_screen(frame):
         ]
         co_frames.append(crop)
 
-        cv2.imwrite("out/test4.png", cv2.cvtColor(crop, cv2.COLOR_BGR2RGB))
+        # cv2.imwrite("out/test4.png", cv2.cvtColor(crop, cv2.COLOR_BGR2RGB))
 
         # print("a")
 
@@ -106,10 +149,87 @@ def detect_overlap(frame1, frame2, threshold=0.9):
         return 0
 
 
+def convert_to_datetime(nen, gatu, bi, ji, fun):
+    # print(nen,gatu,bi,ji,fun,sep="-")
+    # 年月日時分を datetime オブジェクトに変換
+    dt = datetime(year=nen, month=gatu, day=bi, hour=ji, minute=fun)
+    is_within_range(dt)
+    return dt
+
+
+def is_within_range(dt):
+    # 2018年10月1日から今日までの範囲を設定
+    start_date = datetime(2018, 10, 1)
+    end_date = datetime.now()
+
+    # 指定された日付が範囲内にあるかどうかを判定
+    if start_date <= dt <= end_date:
+        return True
+    else:
+        # print(nen,gatu,bi,ji,fun,sep="-")
+        print(dt)
+        raise ValueError
+        return False
+
+
+# 文字列からdatetimeを返す
+def find_date(str):
+    snen = str.find("年")
+    sgatu = str.find("月")
+    sbi = str.find("日")
+    sji = str.find("時")
+    sfun = str.find("分")
+    if snen != -1 and sgatu != -1 and sbi != -1 and sji != -1 and sfun != -1:
+
+        nen = int(str[snen - 4 : snen])
+        gatu = int(str[snen + 1 : sgatu])
+        bi = int(str[sgatu + 1 : sbi])
+        ji = int(str[sbi + 1 : sji])
+        fun = int(str[sji + 1 : sfun])
+        # print(nen, gatu, bi, ji, fun)
+        res = convert_to_datetime(nen, gatu, bi, ji, fun)
+        return res
+
+
+# 日付以外も入ってる文字列たちからdatetimeを返す
+def findDate_from_text(txt):
+    no_date_cnt = 0
+    parse_err_cnt = 0
+
+    # たぶんいらん
+    l = []
+
+    no_date_flg = True
+    getted_date = None
+    dated_num = 0
+    # このforは店名などそもそも日付じゃないのも来る
+    for j, stri in enumerate(txt):
+        try:
+            res_date = find_date(stri)
+            if type(res_date) is datetime:
+                l.append(res_date)
+                getted_date = res_date
+                no_date_flg = False
+                dated_num = j
+                continue
+        except ValueError:
+            parse_err_cnt += 1
+            None
+            # print("err")
+    if no_date_flg:
+        return [None, None]
+    # ちゃんと日付入ってたら
+    else:
+        # print("a")
+        strcombined = txt[:dated_num] + txt[dated_num + 1 :]
+
+        return [getted_date, strcombined]
+
+
 parser = argparse.ArgumentParser()
 
 # 実質ここで読むファイル指定
-parser.add_argument("-v", "--video", default="p14.mp4")
+parser.add_argument("-v", "--video", default="mout.mp4")
 parser.add_argument("-p", "--per", default="15", type=int)
 
 args = parser.parse_args()
@@ -131,6 +251,7 @@ frames = np.empty((0, 1920, FRAME_WIDTH, 3), np.uint8)
 
 # フレーム間引き
 PER = args.per
+
 
 # フレームを読み込む
 print("動画を読み込んでいます...")
@@ -170,82 +291,6 @@ tool = tools[0]
 builder = pyocr.builders.TextBuilder(tesseract_layout=6)
 
 
-def convert_to_datetime(nen, gatu, bi, ji, fun):
-    # print(nen,gatu,bi,ji,fun,sep="-")
-    # 年月日時分を datetime オブジェクトに変換
-    dt = datetime(year=nen, month=gatu, day=bi, hour=ji, minute=fun)
-    is_within_range(dt)
-    return dt
-
-
-def is_within_range(dt):
-    # 2018年10月1日から今日までの範囲を設定
-    start_date = datetime(2018, 10, 1)
-    end_date = datetime.now()
-
-    # 指定された日付が範囲内にあるかどうかを判定
-    if start_date <= dt <= end_date:
-        return True
-    else:
-        # print(nen,gatu,bi,ji,fun,sep="-")
-        print(dt)
-        raise ValueError
-        return False
-
-# 文字列からdatetimeを返す
-def find_date(str):
-    snen = str.find("年")
-    sgatu = str.find("月")
-    sbi = str.find("日")
-    sji = str.find("時")
-    sfun = str.find("分")
-    if snen != -1 and sgatu != -1 and sbi != -1 and sji != -1 and sfun != -1:
-
-        nen = int(str[snen - 4 : snen])
-        gatu = int(str[snen + 1 : sgatu])
-        bi = int(str[sgatu + 1 : sbi])
-        ji = int(str[sbi + 1 : sji])
-        fun = int(str[sji + 1 : sfun])
-        # print(nen, gatu, bi, ji, fun)
-        res = convert_to_datetime(nen, gatu, bi, ji, fun)
-        return res
-
-
-# 日付以外も入ってる文字列たちからdatetimeを返す
-def findDate_from_text(txt):
-    no_date_cnt = 0
-    parse_err_cnt = 0
-
-    # たぶんいらん
-    l = []  
-
-    no_date_flg = True
-    getted_date = None
-    dated_num = 0
-    # このforは店名などそもそも日付じゃないのも来る
-    for j, stri in enumerate(txt):
-        try:
-            res_date = find_date(stri)
-            if type(res_date) is datetime:
-                l.append(res_date)
-                getted_date = res_date
-                no_date_flg = False
-                dated_num = j
-                continue
-        except ValueError:
-            parse_err_cnt += 1
-            None
-            # print("err")
-    if no_date_flg:
-        no_date_cnt += 1
-    # ちゃんと日付入ってたら
-    else:
-        # print("a")
-        strcombined = txt[:dated_num] + txt[dated_num + 1 :]
-
-        return [getted_date,strcombined]
-
-
 # フレームごと
 for i in tqdm(range(len(frames))):  # len(frames)
     # カードを持ってくる
@@ -262,17 +307,25 @@ for i in tqdm(range(len(frames))):  # len(frames)
             .split()
         )
 
-        res,strcomb = findDate_from_text(text)
+        try:
+            res, strcomb = findDate_from_text(text)
+        except TypeError:
+            print("ERR")
+
+        if res is None or strcomb is None:
+            continue
 
         # すでに取得した日付かをチェック
         v = next((d["Date"] for d in d_list if d["Date"] == res), None)
         if v is None:
-            d = {"Fn": i, "Cn": j,"Date":res, "str": strcomb}
+            price_out = get_price(strcomb)
+            d = {"Fn": i, "Cn": j, "Date": res, "str": strcomb, "Price": price_out}
             d_list.append(d)
             errcnt = errcnt + 1
             # print("alreadyExist",end="")
-    # 記録
-    errlist.append([i, j, errcnt])
+    if len(cards) != 0 :
+        # 記録
+        errlist.append([i, j, errcnt])
 
 
 # サポート外の型が指定されたときの挙動を定義
@@ -291,7 +344,13 @@ def custom_default(o):
 with open(
     "out/" + video_path + "_" + str(PER) + ".json", mode="wt", encoding="utf-8"
 ) as f:
-    json.dump(d_list, f, ensure_ascii=False, indent=2,default=custom_default)
+    json.dump(d_list, f, ensure_ascii=False, indent=2, default=custom_default)
+
+fieldnames = ["Fn", "Cn", "Date", "str", "Price"]
+with open("out/csv" + video_path + "_" + str(PER) +".csv", "w", newline="") as f:
+    writer = csv.DictWriter(f, fieldnames=fieldnames)
+    writer.writeheader()
+    writer.writerows(d_list)
 
 print("finish")
 
